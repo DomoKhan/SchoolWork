@@ -81,7 +81,63 @@ public class Program1 extends AbstractProgram1 {
      * @return A stable Matching.
      */
     public Matching stableMatchingGaleShapley(Matching given_matching) {
-        /* TODO implement this function */
-        return null; /* TODO remove this line */
+	ArrayList<ArrayList<Integer>> landlord_own = given_matching.getLandlordOwners();
+	ArrayList<ArrayList<Integer>> landlord_pref = given_matching.getLandlordPref(); 
+	ArrayList<ArrayList<Integer>> tenant_pref = given_matching.getTenantPref();
+	ArrayList<Integer> tenant_matching = given_matching.getTenantMatching();// keeps track of who has what apt
+	int tenant_count = 0; 
+	int rejected_tenant = -1; // if -1 then that means no one has been rejected - rejected means kicked out or hasn't found any
+	while(tenant_count < given_matching.getTenantCount()){
+		int current_searcher;	
+		if(rejected_tenant != -1){
+			current_searcher = rejected_tenant; 
+			rejected_tenant = -1;
+		}
+		else{
+			current_searcher = tenant_count;
+			++tenant_count; 
+		}
+		ArrayList<Integer> current_tenant_pref = tenant_pref.get(current_searcher);
+		int interested_apt = highestPref(current_tenant_pref);
+		if(tenant_matching.get(interested_apt) == null){	// it is empty so move in
+			tenant_matching.set(interested_apt, current_searcher);
+			tenant_pref.get(current_searcher).set(interested_apt, null);	// so tenant don't relook at apt
+		}
+		else{							// compare the two tenants
+			int interested_landlord = findLandlord(landlord_own, interested_apt);
+			ArrayList<Integer> interested_landlord_pref = landlord_pref.get(interested_landlord);
+			int current_match = tenant_matching.get(interested_apt);
+			if(interested_landlord_pref.get(current_searcher) < interested_landlord_pref.get(current_match)){ // the new is better
+				rejected_tenant = current_match;	
+				tenant_matching.set(interested_apt, current_searcher);
+				tenant_pref.get(current_searcher).set(interested_apt, null);
+			}
+			else{					// the old is better so look again
+				rejected_tenant = current_searcher;	
+			}
+
+		}
+	}
+    	given_matching.setTenantMatching(tenant_matching);
+	Matching solution = new Matching(given_matching, tenant_matching);
+	return solution;
+    }
+
+    /**
+     * Determines who is the highest in the preference list	
+     * 
+     * @return index of the highest preference
+     */
+    public int highestPref(ArrayList<Integer> pref_list){
+	int highest = pref_list.get(0); // keep track of highest rank
+	int index_highest = 0; // index of highest rank
+	for(int i = 1; i < pref_list.size(); ++i){
+		int element = pref_list.get(i);
+		if(highest > element){
+			highest = element;
+			index_highest = i;
+		}
+	}
+	return index_highest;
     }
 }
