@@ -5,7 +5,7 @@
 
 import java.util.ArrayList;
 import java.util.LinkedList;
-
+import java.util.Collections;
 /**
  * Your solution goes in this class.
  * 
@@ -84,7 +84,7 @@ public class Program1 extends AbstractProgram1 {
 	ArrayList<ArrayList<Integer>> landlord_own = given_matching.getLandlordOwners();
 	ArrayList<ArrayList<Integer>> landlord_pref = given_matching.getLandlordPref(); 
 	ArrayList<ArrayList<Integer>> tenant_pref = given_matching.getTenantPref();
-	ArrayList<Integer> tenant_matching = given_matching.getTenantMatching();// keeps track of who has what apt
+	ArrayList<Integer> tenant_matching = new ArrayList<Integer>(Collections.nCopies(given_matching.getTenantCount(), -1));//keeps track of who has what apt
 	int tenant_count = 0; 
 	int rejected_tenant = -1; // if -1 then that means no one has been rejected - rejected means kicked out or hasn't found any
 	while(tenant_count < given_matching.getTenantCount()){
@@ -99,7 +99,7 @@ public class Program1 extends AbstractProgram1 {
 		}
 		ArrayList<Integer> current_tenant_pref = tenant_pref.get(current_searcher);
 		int interested_apt = highestPref(current_tenant_pref);
-		if(tenant_matching.get(interested_apt) == null){	// it is empty so move in
+		if(tenant_matching.get(interested_apt) == -1){	// it is empty so move in
 			tenant_matching.set(interested_apt, current_searcher);
 			tenant_pref.get(current_searcher).set(interested_apt, null);	// so tenant don't relook at apt
 		}
