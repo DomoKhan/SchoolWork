@@ -29,13 +29,12 @@ public class Program1 extends AbstractProgram1 {
 	ArrayList<ArrayList<Integer>> landlord_pref = given_matching.getLandlordPref(); 
 	ArrayList<ArrayList<Integer>> tenant_pref = given_matching.getTenantPref();
 	ArrayList<Integer> tenant_matching = given_matching.getTenantMatching();
+	ArrayList<Integer> landlord_list = setLandlordList(landlord_own, tenant_matching.size());
 	for(int i = 0; i < tenant_matching.size(); ++i){
 		int apt1 = tenant_matching.get(i); // apt of the first match
 		ArrayList<Integer> t1_pref = tenant_pref.get(i); // get tenant 1 preferences
 		int t1_prefOf_l1 = t1_pref.get(apt1); // Tenant 1 pref apt rank
-		int first_landlord = findLandlord(landlord_own, apt1); // The first landlord index
-		if(first_landlord == -1)
-			return false;
+		int first_landlord = landlord_list.get(apt1); // The first landlord index
 		ArrayList<Integer> l1_pref = landlord_pref.get(first_landlord);			     // the first landlord preference list
 		int l1_prefOf_t1 = l1_pref.get(i); // Landlord 1 pref of tenant 1
 		for(int j = i + 1; j < tenant_matching.size(); ++j){
@@ -44,32 +43,34 @@ public class Program1 extends AbstractProgram1 {
 			int t2_prefOf_l2 = t2_pref.get(apt2);  // get the pref rank of tenant 2 for his apt
 			int t1_prefOf_l2 = t1_pref.get(apt2);  // get pref rank of tenant 1 for tenant 2 apt
 			int t2_prefOf_l1 = t2_pref.get(apt1);  // get pref rank of tenant 2 for tenant 1 apt
-			int second_landlord = findLandlord(landlord_own, apt2);
-			if(second_landlord == -1)  // the landlord did not want them;
-				return false;
+			int second_landlord = landlord_list.get(apt2);
+			
+			if(second_landlord == first_landlord)  // the landlord owns both so he would want to keep both
+				continue;
 			ArrayList<Integer> l2_pref = landlord_pref.get(second_landlord); // landlord 2 pref list
-			int l1_prefOf_t2 = l1_pref.indexOf(j);
-			int l2_prefOf_t1 = l2_pref.indexOf(i);
-			int l2_prefOf_t2 = l2_pref.indexOf(j);
-			if(t1_prefOf_l1 > t1_prefOf_l2 && l1_prefOf_t1 > l1_prefOf_t2) 
+			int l1_prefOf_t2 = l1_pref.get(j);
+			int l2_prefOf_t1 = l2_pref.get(i);
+			int l2_prefOf_t2 = l2_pref.get(j);
+			if(t1_prefOf_l1 > t1_prefOf_l2 && l2_prefOf_t2 > l2_prefOf_t1) // t1 prefers l2 && l2 prefers t1 
 				return false;
-			if(t2_prefOf_l2 > t2_prefOf_l1 && l2_prefOf_t2 > l2_prefOf_t1)
+			if(t2_prefOf_l2 > t2_prefOf_l1 && l1_prefOf_t1 > l1_prefOf_t2) // t2 prefers l1 && l1 prefers t2
 				return false;
 		}
 	}
-	return true; /* TODO remove this line */
+	return true; 
     }
 
     /*
      * Determines which landlord owns the apt
      */ 
      
-     public int findLandlord(ArrayList<ArrayList<Integer>> landlord_own, int apt){
-	for(int i = 0; i < landlord_own.size(); ++i){
-		if(landlord_own.get(i).contains(apt))
-			return i;
-	}
-	return -1;
+    public ArrayList<Integer> setLandlordList(ArrayList<ArrayList<Integer>> landlord_own, int amount){
+    	ArrayList<Integer> landlord_list = new ArrayList<Integer>(Collections.nCopies(amount, -1));
+    	for(int i = 0; i < landlord_own.size(); ++i){
+    		for(int j = 0; j < landlord_own.get(i).size(); ++j)
+    			landlord_list.set(landlord_own.get(i).get(j), i);
+    	}
+    	return landlord_list;
     }
     /**
      * Determines a solution to the Stable Matching problem from the given input
@@ -83,6 +84,7 @@ public class Program1 extends AbstractProgram1 {
 		ArrayList<ArrayList<Integer>> landlord_pref = given_matching.getLandlordPref(); 
 		ArrayList<ArrayList<Integer>> tenant_pref = given_matching.getTenantPref();
 		ArrayList<ArrayList<Boolean>> entire_looked = new ArrayList<ArrayList<Boolean>>();
+		ArrayList<Integer> landlord_list = setLandlordList(landlord_own, given_matching.getTenantCount());
 		for(int i = 0; i < given_matching.getTenantCount(); ++i){
 			ArrayList<Boolean> already_looked = new ArrayList<Boolean>(Collections.nCopies(given_matching.getTenantCount(), false));
 			entire_looked.add(already_looked); // for determining who searched what		
@@ -112,13 +114,13 @@ public class Program1 extends AbstractProgram1 {
 				apt_matching.set(interested_apt, current_searcher);
 			}
 			else{							// compare the two tenants
-				int interested_landlord = findLandlord(landlord_own, interested_apt);
+				int interested_landlord = landlord_list.get(interested_apt);
 				ArrayList<Integer> interested_landlord_pref = landlord_pref.get(interested_landlord);
-				int current_match = tenant_matching.get(interested_apt);
+				int current_match = apt_matching.get(interested_apt);
 				if(interested_landlord_pref.get(current_searcher) < interested_landlord_pref.get(current_match)){ // the new is better
 					rejected_tenant = current_match;	
 					tenant_matching.set(current_searcher, interested_apt);
-					apt_matching.set(interested_apt, current_match);
+					apt_matching.set(interested_apt, current_searcher);
 				}
 				else{					// the old is better or the same rank so look again
 					rejected_tenant = current_searcher;	
@@ -154,3 +156,4 @@ public class Program1 extends AbstractProgram1 {
 		return index_highest;
     }
 }
+
