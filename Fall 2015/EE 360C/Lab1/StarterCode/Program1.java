@@ -28,8 +28,6 @@ public class Program1 extends AbstractProgram1 {
 	ArrayList<ArrayList<Integer>> landlord_own = given_matching.getLandlordOwners();
 	ArrayList<ArrayList<Integer>> landlord_pref = given_matching.getLandlordPref(); 
 	ArrayList<ArrayList<Integer>> tenant_pref = given_matching.getTenantPref();
-	int num_landLords = given_matching.getLandlordCount();
-	int num_tenants = given_matching.getTenantCount();
 	ArrayList<Integer> tenant_matching = given_matching.getTenantMatching();
 	for(int i = 0; i < tenant_matching.size(); ++i){
 		int apt1 = tenant_matching.get(i); // apt of the first match
@@ -39,7 +37,7 @@ public class Program1 extends AbstractProgram1 {
 		if(first_landlord == -1)
 			return false;
 		ArrayList<Integer> l1_pref = landlord_pref.get(first_landlord);			     // the first landlord preference list
-		int l1_prefOf_t1 = l1_pref.indexOf(i); // Landlord 1 pref of tenant 1
+		int l1_prefOf_t1 = l1_pref.get(i); // Landlord 1 pref of tenant 1
 		for(int j = i + 1; j < tenant_matching.size(); ++j){
 			int apt2 = tenant_matching.get(j); 	// apt of second match;
 			ArrayList<Integer> t2_pref = tenant_pref.get(j); // get tenant 2 preference
@@ -53,7 +51,7 @@ public class Program1 extends AbstractProgram1 {
 			int l1_prefOf_t2 = l1_pref.indexOf(j);
 			int l2_prefOf_t1 = l2_pref.indexOf(i);
 			int l2_prefOf_t2 = l2_pref.indexOf(j);
-			if(t1_prefOf_l1 > t1_prefOf_l2 && l1_prefOf_t1 > l1_prefOf_t2)
+			if(t1_prefOf_l1 > t1_prefOf_l2 && l1_prefOf_t1 > l1_prefOf_t2) 
 				return false;
 			if(t2_prefOf_l2 > t2_prefOf_l1 && l2_prefOf_t2 > l2_prefOf_t1)
 				return false;
@@ -81,63 +79,78 @@ public class Program1 extends AbstractProgram1 {
      * @return A stable Matching.
      */
     public Matching stableMatchingGaleShapley(Matching given_matching) {
-	ArrayList<ArrayList<Integer>> landlord_own = given_matching.getLandlordOwners();
-	ArrayList<ArrayList<Integer>> landlord_pref = given_matching.getLandlordPref(); 
-	ArrayList<ArrayList<Integer>> tenant_pref = given_matching.getTenantPref();
-	ArrayList<Integer> tenant_matching = new ArrayList<Integer>(Collections.nCopies(given_matching.getTenantCount(), -1));//keeps track of who has what apt
-	int tenant_count = 0; 
-	int rejected_tenant = -1; // if -1 then that means no one has been rejected - rejected means kicked out or hasn't found any
-	while(tenant_count < given_matching.getTenantCount()){
-		int current_searcher;	
-		if(rejected_tenant != -1){
-			current_searcher = rejected_tenant; 
-			rejected_tenant = -1;
+		ArrayList<ArrayList<Integer>> landlord_own = given_matching.getLandlordOwners();
+		ArrayList<ArrayList<Integer>> landlord_pref = given_matching.getLandlordPref(); 
+		ArrayList<ArrayList<Integer>> tenant_pref = given_matching.getTenantPref();
+		ArrayList<ArrayList<Boolean>> entire_looked = new ArrayList<ArrayList<Boolean>>();
+		for(int i = 0; i < given_matching.getTenantCount(); ++i){
+			ArrayList<Boolean> already_looked = new ArrayList<Boolean>(Collections.nCopies(given_matching.getTenantCount(), false));
+			entire_looked.add(already_looked); // for determining who searched what		
 		}
-		else{
-			current_searcher = tenant_count;
-			++tenant_count; 
-		}
-		ArrayList<Integer> current_tenant_pref = tenant_pref.get(current_searcher);
-		int interested_apt = highestPref(current_tenant_pref);
-		if(tenant_matching.get(interested_apt) == -1){	// it is empty so move in
-			tenant_matching.set(interested_apt, current_searcher);
-			tenant_pref.get(current_searcher).set(interested_apt, null);	// so tenant don't relook at apt
-		}
-		else{							// compare the two tenants
-			int interested_landlord = findLandlord(landlord_own, interested_apt);
-			ArrayList<Integer> interested_landlord_pref = landlord_pref.get(interested_landlord);
-			int current_match = tenant_matching.get(interested_apt);
-			if(interested_landlord_pref.get(current_searcher) < interested_landlord_pref.get(current_match)){ // the new is better
-				rejected_tenant = current_match;	
-				tenant_matching.set(interested_apt, current_searcher);
-				tenant_pref.get(current_searcher).set(interested_apt, null);
+		ArrayList<Integer> tenant_matching = new ArrayList<Integer>(Collections.nCopies(given_matching.getTenantCount(), -1));//keeps track of who has what apt
+		ArrayList<Integer> apt_matching = new ArrayList<Integer>(Collections.nCopies(given_matching.getTenantCount(), -1));//keeps track of which apt is taken
+		int tenant_count = 0; 
+		int rejected_tenant = -1; // if -1 then that means no one has been rejected - rejected means kicked out or hasn't found any
+		while(tenant_count - 1 < given_matching.getTenantCount()){
+			int current_searcher;	
+			if(rejected_tenant != -1){
+				current_searcher = rejected_tenant; 
+				rejected_tenant = -1;
 			}
-			else{					// the old is better so look again
-				rejected_tenant = current_searcher;	
+			else{
+				current_searcher = tenant_count;
+				++tenant_count; 
 			}
-
+			if(current_searcher >= given_matching.getTenantCount())
+				break;
+			ArrayList<Integer> current_tenant_pref = tenant_pref.get(current_searcher); 
+			ArrayList<Boolean> current_tenant_search = entire_looked.get(current_searcher); // what the current tenant has searched
+			int interested_apt = highestPref(current_tenant_pref, current_tenant_search); // gets the preferred apartment
+		    	current_tenant_search.set(interested_apt, true);	// this apartment has been tried by this tenant
+			if(apt_matching.get(interested_apt) == -1){	// it is empty so move in
+				tenant_matching.set(current_searcher, interested_apt);
+				apt_matching.set(interested_apt, current_searcher);
+			}
+			else{							// compare the two tenants
+				int interested_landlord = findLandlord(landlord_own, interested_apt);
+				ArrayList<Integer> interested_landlord_pref = landlord_pref.get(interested_landlord);
+				int current_match = tenant_matching.get(interested_apt);
+				if(interested_landlord_pref.get(current_searcher) < interested_landlord_pref.get(current_match)){ // the new is better
+					rejected_tenant = current_match;	
+					tenant_matching.set(current_searcher, interested_apt);
+					apt_matching.set(interested_apt, current_match);
+				}
+				else{					// the old is better or the same rank so look again
+					rejected_tenant = current_searcher;	
+				}
+			}
 		}
-	}
-    	given_matching.setTenantMatching(tenant_matching);
-	Matching solution = new Matching(given_matching, tenant_matching);
-	return solution;
+	  given_matching.setTenantMatching(tenant_matching);
+		Matching solution = new Matching(given_matching, tenant_matching);
+		return solution;
     }
 
     /**
      * Determines who is the highest in the preference list	
-     * 
+     * If the apt has been searched, skip it 
      * @return index of the highest preference
      */
-    public int highestPref(ArrayList<Integer> pref_list){
-	int highest = pref_list.get(0); // keep track of highest rank
-	int index_highest = 0; // index of highest rank
-	for(int i = 1; i < pref_list.size(); ++i){
-		int element = pref_list.get(i);
-		if(highest > element){
-			highest = element;
-			index_highest = i;
+    public int highestPref(ArrayList<Integer> pref_list, ArrayList<Boolean> already_searched){
+		int highest = -1 ;// keep track of highest rank
+		int index_highest = -1; // index of highest rank
+		for(int i = 0; i < pref_list.size(); ++i){
+			if(already_searched.get(i))
+				continue;
+			if(highest == -1){
+				highest = pref_list.get(i);
+				index_highest = i;
+			} 
+			int element = pref_list.get(i);
+			if(highest > element){
+				highest = element;
+				index_highest = i;
+			}
 		}
-	}
-	return index_highest;
+		return index_highest;
     }
 }
